@@ -161,6 +161,20 @@ func (mr *MockAzureActionsMockRecorder) VMRedeployAndWait(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMRedeployAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMRedeployAndWait), arg0, arg1)
 }
 
+// VMResize mocks base method.
+func (m *MockAzureActions) VMResize(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMResize", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMResize indicates an expected call of VMResize.
+func (mr *MockAzureActionsMockRecorder) VMResize(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMResize", reflect.TypeOf((*MockAzureActions)(nil).VMResize), arg0, arg1, arg2)
+}
+
 // VMSerialConsole mocks base method.
 func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.ResponseWriter, arg2 *logrus.Entry, arg3 string) error {
 	m.ctrl.T.Helper()

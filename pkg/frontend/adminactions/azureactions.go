@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -24,6 +25,7 @@ type AzureActions interface {
 	ResourcesList(ctx context.Context) ([]byte, error)
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMSizeList(ctx context.Context, vmName string) ([]byte, error)
+	VMResize(ctx context.Context, vmName string, vmSize string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
 }
 
@@ -75,4 +77,14 @@ func (a *azureActions) VMSizeList(ctx context.Context, vmName string) ([]byte, e
 		return nil, err
 	}
 	return json.Marshal(*vmSizes)
+}
+
+func (a *azureActions) VMResize(ctx context.Context, vmName string, vmSize string) error {
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	vm, err := a.virtualMachines.Get(ctx, clusterRGName, vmName, mgmtcompute.InstanceView)
+	if err != nil {
+		return err
+	}
+	vm.HardwareProfile.VMSize = mgmtcompute.VirtualMachineSizeTypesStandardD8sV3
+	return a.virtualMachines.CreateOrUpdateAndWait(ctx, clusterRGName, vmName, vm)
 }

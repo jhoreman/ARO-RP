@@ -118,3 +118,11 @@ func validateAdminVMName(vmName string) error {
 
 	return nil
 }
+
+func validateAdminVMSize(vmSize string) error {
+	// TODO - need to check that it's a valid resize target for the VM in question
+	if vmSize == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is invalid.", vmSize)
+	}
+	return nil
+}
