@@ -147,24 +147,57 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 	}
 
 	// 6.  Power off the VM
+	log.Infof("stopping node '%s'", resizeNode.ObjectMeta.Name)
 	err = a.VMStopAndWait(ctx, vmName)
 	if err != nil {
 		return err
 	}
 
 	// 7.  Create or update VM
+	log.Infof("resizing node '%s'", resizeNode.ObjectMeta.Name)
 	err = a.VMResize(ctx, vmName, vmSize)
 	if err != nil {
 		return err
 	}
 
 	// 8.  Power on VM
+	log.Infof("starting node '%s'", resizeNode.ObjectMeta.Name)
 	err = a.VMStartAndWait(ctx, vmName)
 	if err != nil {
 		return err
 	}
 
 	// 9.  Uncordon (update to the node)
+	bNode, err := k.KubeGet(ctx, "node", "", vmName)
+	if err != nil {
+		return err
+	}
+
+	var node corev1.Node
+	if err = json.Unmarshal(bNode, &u); err != nil {
+		return err
+	}
+
+	err = kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &node)
+	if err != nil {
+		return err
+	}
+
+	node.Spec.Unschedulable = false
+	node.Status = corev1.NodeStatus{}
+
+	uMap, err = kruntime.DefaultUnstructuredConverter.ToUnstructured(&node)
+	if err != nil {
+		return err
+	}
+	unstruct.Object = uMap
+
+	err = k.KubeCreateOrUpdate(ctx, unstruct)
+	if err != nil {
+		return err
+	}
+
+	// 10. Update Machine object with new size
 
 	return nil
 	// return a.VMResize(ctx, vmName, "vmSize")
@@ -189,6 +222,5 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		- VM Name: query param
 		- VM Size: query param
 		- [] json/yaml
-		- [] force (TBD) - REQUEST BODY
 	*/
 }

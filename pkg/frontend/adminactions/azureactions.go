@@ -92,12 +92,19 @@ func (a *azureActions) VMSizeList(ctx context.Context, vmName string) ([]byte, e
 	return json.Marshal(*vmSizes)
 }
 
-func (a *azureActions) VMResize(ctx context.Context, vmName string, vmSize string) error {
+func (a *azureActions) VMResize(ctx context.Context, vmName string, size string) error {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 	vm, err := a.virtualMachines.Get(ctx, clusterRGName, vmName, mgmtcompute.InstanceView)
 	if err != nil {
 		return err
 	}
-	vm.HardwareProfile.VMSize = mgmtcompute.VirtualMachineSizeTypesStandardD8sV3
+
+	// var vmSize interface{} = string(size)
+	// vmSizeType, ok := vmSize.(mgmtcompute.VirtualMachineSizeTypes)
+	// if !ok {
+	// 	return fmt.Errorf("attempted to resize to an invalid VM type '%s'", size)
+	// }
+
+	vm.HardwareProfile.VMSize = mgmtcompute.VirtualMachineSizeTypes(size)
 	return a.virtualMachines.CreateOrUpdateAndWait(ctx, clusterRGName, vmName, vm)
 }
