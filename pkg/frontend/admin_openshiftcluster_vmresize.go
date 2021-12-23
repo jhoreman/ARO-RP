@@ -12,9 +12,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -86,17 +86,17 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 	}
 
 	var u unstructured.Unstructured
-	var nodes v1.NodeList
+	var nodes corev1.NodeList
 	if err = json.Unmarshal(nodeList, &u); err != nil {
 		return err
 	}
 
-	err = runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &nodes)
+	err = kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &nodes)
 	if err != nil {
 		return err
 	}
 
-	var resizeNode *v1.Node
+	var resizeNode *corev1.Node
 	for _, node := range nodes.Items {
 		if _, ok := node.ObjectMeta.Labels["node-role.kubernetes.io/master"]; !ok {
 			continue
@@ -107,7 +107,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		}
 
 		for _, condition := range node.Status.Conditions {
-			if condition.Type == v1.NodeReady && condition.Status == v1.ConditionFalse {
+			if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionFalse {
 				// Bail out because there is a node not ready
 				return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
 					"The master VM '%s' under resource group '%s' was not ready.  Refusing to resize.",
@@ -126,9 +126,9 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 	// 4.  Cordon the node (update to the node)
 	log.Infof("cordoning node '%s'", resizeNode.ObjectMeta.Name)
 	resizeNode.Spec.Unschedulable = true
-	resizeNode.Status = v1.NodeStatus{}
+	resizeNode.Status = corev1.NodeStatus{}
 	unstruct := &unstructured.Unstructured{}
-	uMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(resizeNode)
+	uMap, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(resizeNode)
 	if err != nil {
 		return err
 	}
@@ -140,6 +140,31 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 	}
 
 	// 5.  Drain the node (ignore-daemonsets, !force, --delete-local-data)
+	log.Infof("draining node '%s'", vmName)
+	err = k.KubeDrain(ctx, vmName)
+	if err != nil {
+		return err
+	}
+
+	// 6.  Power off the VM
+	err = a.VMStopAndWait(ctx, vmName)
+	if err != nil {
+		return err
+	}
+
+	// 7.  Create or update VM
+	err = a.VMResize(ctx, vmName, vmSize)
+	if err != nil {
+		return err
+	}
+
+	// 8.  Power on VM
+	err = a.VMStartAndWait(ctx, vmName)
+	if err != nil {
+		return err
+	}
+
+	// 9.  Uncordon (update to the node)
 
 	return nil
 	// return a.VMResize(ctx, vmName, "vmSize")
@@ -148,6 +173,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		1.  Validate the VM & node exist (we don't actually do this in redeploy VM)
 		2.  Ensure the new VM type is a valid resize target
 		3.  Validate all other master nodes are ready (potential for "force")
+			- skip-kubernetes-checks: skip any k8s API calls as they may fail due to the node not being properly sized
 		4.  Cordon the node (update to the node)
 		5.  Drain the node (ignore-daemonsets, !force, --delete-local-data)
 		6.  Power off the VM

@@ -6,13 +6,17 @@ package adminactions
 import (
 	"context"
 	"net/http"
+	"time"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/kubectl/pkg/drain"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -26,6 +30,7 @@ type KubeActions interface {
 	KubeList(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	KubeCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	KubeDelete(ctx context.Context, groupKind, namespace, name string) error
+	KubeDrain(ctx context.Context, name string) error
 	Upgrade(ctx context.Context, upgradeY bool) error
 }
 
@@ -35,8 +40,9 @@ type kubeActions struct {
 
 	gvrResolver dynamichelper.GVRResolver
 
-	dyn       dynamic.Interface
-	configcli configclient.Interface
+	kubernetescli kubernetes.Interface
+	dyn           dynamic.Interface
+	configcli     configclient.Interface
 }
 
 // NewKubeActions returns a kubeActions
@@ -56,6 +62,11 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		return nil, err
 	}
 
+	kubernetescli, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	configcli, err := configclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
@@ -67,8 +78,9 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 
 		gvrResolver: gvrResolver,
 
-		dyn:       dyn,
-		configcli: configcli,
+		kubernetescli: kubernetescli,
+		dyn:           dyn,
+		configcli:     configcli,
 	}, nil
 }
 
@@ -129,4 +141,21 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 	}
 
 	return k.dyn.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+}
+
+func (k *kubeActions) KubeDrain(ctx context.Context, name string) error {
+	return drain.RunNodeDrain(&drain.Helper{
+		Client:              k.kubernetescli,
+		Force:               true,
+		GracePeriodSeconds:  -1,
+		IgnoreAllDaemonSets: true,
+		Timeout:             2 * time.Minute,
+		DeleteEmptyDirData:  true,
+		DisableEviction:     true,
+		OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {
+			k.log.Printf("deleted pod %s/%s", pod.Namespace, pod.Name)
+		},
+		Out:    k.log.Writer(),
+		ErrOut: k.log.Writer(),
+	}, name)
 }

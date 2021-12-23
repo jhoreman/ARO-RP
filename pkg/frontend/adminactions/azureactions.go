@@ -24,6 +24,8 @@ import (
 type AzureActions interface {
 	ResourcesList(ctx context.Context) ([]byte, error)
 	VMRedeployAndWait(ctx context.Context, vmName string) error
+	VMStartAndWait(ctx context.Context, vmName string) error
+	VMStopAndWait(ctx context.Context, vmName string) error
 	VMSizeList(ctx context.Context, vmName string) ([]byte, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
@@ -70,6 +72,17 @@ func (a *azureActions) VMRedeployAndWait(ctx context.Context, vmName string) err
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 	return a.virtualMachines.RedeployAndWait(ctx, clusterRGName, vmName)
 }
+
+func (a *azureActions) VMStartAndWait(ctx context.Context, vmName string) error {
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	return a.virtualMachines.StartAndWait(ctx, clusterRGName, vmName)
+}
+
+func (a *azureActions) VMStopAndWait(ctx context.Context, vmName string) error {
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	return a.virtualMachines.StopAndWait(ctx, clusterRGName, vmName)
+}
+
 func (a *azureActions) VMSizeList(ctx context.Context, vmName string) ([]byte, error) {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 	vmSizes, err := a.virtualMachines.ListResizeOptions(ctx, clusterRGName, vmName)

@@ -65,6 +65,20 @@ func (mr *MockKubeActionsMockRecorder) KubeDelete(arg0, arg1, arg2, arg3 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeDelete", reflect.TypeOf((*MockKubeActions)(nil).KubeDelete), arg0, arg1, arg2, arg3)
 }
 
+// KubeDrain mocks base method.
+func (m *MockKubeActions) KubeDrain(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KubeDrain", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// KubeDrain indicates an expected call of KubeDrain.
+func (mr *MockKubeActionsMockRecorder) KubeDrain(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeDrain", reflect.TypeOf((*MockKubeActions)(nil).KubeDrain), arg0, arg1)
+}
+
 // KubeGet mocks base method.
 func (m *MockKubeActions) KubeGet(arg0 context.Context, arg1, arg2, arg3 string) ([]byte, error) {
 	m.ctrl.T.Helper()
