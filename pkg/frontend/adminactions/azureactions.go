@@ -99,12 +99,6 @@ func (a *azureActions) VMResize(ctx context.Context, vmName string, size string)
 		return err
 	}
 
-	// var vmSize interface{} = string(size)
-	// vmSizeType, ok := vmSize.(mgmtcompute.VirtualMachineSizeTypes)
-	// if !ok {
-	// 	return fmt.Errorf("attempted to resize to an invalid VM type '%s'", size)
-	// }
-
 	vm.HardwareProfile.VMSize = mgmtcompute.VirtualMachineSizeTypes(size)
 	return a.virtualMachines.CreateOrUpdateAndWait(ctx, clusterRGName, vmName, vm)
 }
