@@ -58,7 +58,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 	}
 
 	vmSize := r.URL.Query().Get("vmSize")
-	err = validateAdminVMSize(vmSize) // TODO validating it's actually a good VM target
+	err = validateAdminVMSize(vmSize)
 	if err != nil {
 		return err
 	}
@@ -72,14 +72,13 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 	}
 
 	// TODO - remove
-	_, _ = a.VMSizeList(ctx, vmName)
+	_, _ = a.VMSizeList(ctx)
 
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
 
-	// 1. Fetch and validate all the master nodes are ready
 	nodeList, err := k.KubeList(ctx, "node", "")
 	if err != nil {
 		return err
@@ -106,24 +105,14 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 			resizeNode = node.DeepCopy()
 		}
 
-		for _, condition := range node.Status.Conditions {
-			if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionFalse {
-				// Bail out because there is a node not ready
-				return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeRequestNotAllowed, "",
-					"The master VM '%s' under resource group '%s' was not ready.  Refusing to resize.",
-					node.ObjectMeta.Name, vars["resourceGroupName"])
-			}
-		}
 	}
 
-	// Ensure the node exists
 	if resizeNode == nil {
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "",
 			"The master node '%s' under resource group '%s' was not found.",
 			vmName, vars["resourceGroupName"])
 	}
 
-	// 4.  Cordon the node (update to the node)
 	log.Infof("cordoning node '%s'", resizeNode.ObjectMeta.Name)
 	resizeNode.Spec.Unschedulable = true
 	resizeNode.Status = corev1.NodeStatus{}
@@ -139,35 +128,30 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		return err
 	}
 
-	// 5.  Drain the node (ignore-daemonsets, !force, --delete-local-data)
 	log.Infof("draining node '%s'", vmName)
 	err = k.KubeDrain(ctx, vmName)
 	if err != nil {
 		return err
 	}
 
-	// 6.  Power off the VM
 	log.Infof("stopping node '%s'", resizeNode.ObjectMeta.Name)
 	err = a.VMStopAndWait(ctx, vmName)
 	if err != nil {
 		return err
 	}
 
-	// 7.  Create or update VM
 	log.Infof("resizing node '%s'", resizeNode.ObjectMeta.Name)
 	err = a.VMResize(ctx, vmName, vmSize)
 	if err != nil {
 		return err
 	}
 
-	// 8.  Power on VM
 	log.Infof("starting node '%s'", resizeNode.ObjectMeta.Name)
 	err = a.VMStartAndWait(ctx, vmName)
 	if err != nil {
 		return err
 	}
 
-	// 9.  Uncordon (update to the node)
 	bNode, err := k.KubeGet(ctx, "node", "", vmName)
 	if err != nil {
 		return err
@@ -197,30 +181,5 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		return err
 	}
 
-	// 10. Update Machine object with new size
-
 	return nil
-	// return a.VMResize(ctx, vmName, "vmSize")
-
-	/*
-		1.  Validate the VM & node exist (we don't actually do this in redeploy VM)
-		2.  Ensure the new VM type is a valid resize target
-		3.  Validate all other master nodes are ready (potential for "force")
-			- skip-kubernetes-checks: skip any k8s API calls as they may fail due to the node not being properly sized
-		4.  Cordon the node (update to the node)
-		5.  Drain the node (ignore-daemonsets, !force, --delete-local-data)
-		6.  Power off the VM
-		7.  Create or update VM
-		8.  Power on VM
-		9.  Uncordon (update to the node)
-		10. Update Machine object with new size
-
-
-		Geneva actions interface:
-		- ResourceID:
-		- Region:
-		- VM Name: query param
-		- VM Size: query param
-		- [] json/yaml
-	*/
 }

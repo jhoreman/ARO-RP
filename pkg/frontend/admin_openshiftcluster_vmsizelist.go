@@ -5,10 +5,12 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"path/filepath"
 	"strings"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -29,12 +31,6 @@ func (f *frontend) getAdminOpenShiftClusterVMResizeOptions(w http.ResponseWriter
 
 func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
 	vars := mux.Vars(r)
-
-	vmName := r.URL.Query().Get("vmName")
-	err := validateAdminVMName(vmName)
-	if err != nil {
-		return nil, err
-	}
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
@@ -58,5 +54,24 @@ func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context,
 		return nil, err
 	}
 
-	return a.VMSizeList(ctx, vmName)
+	skus, err := a.VMSizeList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(f.filterVMSkus(skus))
+}
+
+func (f *frontend) filterVMSkus(skus []mgmtcompute.ResourceSku) []string {
+	filteredSkus := []string{}
+
+	for _, sku := range skus {
+		if sku.Restrictions != nil && len(*sku.Restrictions) == 0 {
+			if sku.Name != nil {
+				filteredSkus = append(filteredSkus, *sku.Name)
+			}
+		}
+	}
+
+	return filteredSkus
 }

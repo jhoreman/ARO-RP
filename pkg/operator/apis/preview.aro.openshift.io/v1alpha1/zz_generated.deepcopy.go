@@ -5,7 +5,7 @@
 package v1alpha1
 
 import (
-	v1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/api/operator/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 

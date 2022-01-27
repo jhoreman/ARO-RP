@@ -5,7 +5,7 @@ package adminactions
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"net/http"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -26,7 +26,7 @@ type AzureActions interface {
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMStartAndWait(ctx context.Context, vmName string) error
 	VMStopAndWait(ctx context.Context, vmName string) error
-	VMSizeList(ctx context.Context, vmName string) ([]byte, error)
+	VMSizeList(ctx context.Context) ([]mgmtcompute.ResourceSku, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
 }
@@ -37,6 +37,7 @@ type azureActions struct {
 	oc  *api.OpenShiftCluster
 
 	resources          features.ResourcesClient
+	resourceSkus       compute.ResourceSkusClient
 	virtualMachines    compute.VirtualMachinesClient
 	virtualNetworks    network.VirtualNetworksClient
 	diskEncryptionSets compute.DiskEncryptionSetsClient
@@ -60,6 +61,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		oc:  oc,
 
 		resources:          features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		resourceSkus:       compute.NewResourceSkusClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualMachines:    compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		virtualNetworks:    network.NewVirtualNetworksClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
@@ -83,13 +85,9 @@ func (a *azureActions) VMStopAndWait(ctx context.Context, vmName string) error {
 	return a.virtualMachines.StopAndWait(ctx, clusterRGName, vmName)
 }
 
-func (a *azureActions) VMSizeList(ctx context.Context, vmName string) ([]byte, error) {
-	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
-	vmSizes, err := a.virtualMachines.ListResizeOptions(ctx, clusterRGName, vmName)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(*vmSizes)
+func (a *azureActions) VMSizeList(ctx context.Context) ([]mgmtcompute.ResourceSku, error) {
+	filter := fmt.Sprintf("location eq '%s'", a.env.Location())
+	return a.resourceSkus.List(ctx, filter)
 }
 
 func (a *azureActions) VMResize(ctx context.Context, vmName string, size string) error {

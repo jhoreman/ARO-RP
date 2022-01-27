@@ -18,7 +18,6 @@ type VirtualMachinesClientAddons interface {
 	StartAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	StopAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	List(ctx context.Context, resourceGroupName string) (result []mgmtcompute.VirtualMachine, err error)
-	ListResizeOptions(ctx context.Context, resourceGroupName string, VMName string) (result *[]mgmtcompute.VirtualMachineSize, err error)
 }
 
 func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error {
@@ -58,7 +57,6 @@ func (c *virtualMachinesClient) StartAndWait(ctx context.Context, resourceGroupN
 }
 
 func (c *virtualMachinesClient) StopAndWait(ctx context.Context, resourceGroupName string, VMName string) error {
-	// TODO - should this PowerOff command use graceful or non-graceful shutdown?
 	future, err := c.PowerOff(ctx, resourceGroupName, VMName, to.BoolPtr(false))
 	if err != nil {
 		return err
@@ -83,11 +81,4 @@ func (c *virtualMachinesClient) List(ctx context.Context, resourceGroupName stri
 	}
 
 	return result, nil
-}
-func (c *virtualMachinesClient) ListResizeOptions(ctx context.Context, resourceGroupName string, VMName string) (result *[]mgmtcompute.VirtualMachineSize, err error) {
-	vmResizeOptions, err := c.VirtualMachinesClient.ListAvailableSizes(ctx, resourceGroupName, VMName)
-	if err != nil {
-		return nil, err
-	}
-	return vmResizeOptions.Value, err
 }

@@ -183,21 +183,6 @@ func (mr *MockVirtualMachinesClientMockRecorder) List(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualMachinesClient)(nil).List), arg0, arg1)
 }
 
-// ListResizeOptions mocks base method.
-func (m *MockVirtualMachinesClient) ListResizeOptions(arg0 context.Context, arg1, arg2 string) (*[]compute.VirtualMachineSize, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListResizeOptions", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*[]compute.VirtualMachineSize)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListResizeOptions indicates an expected call of ListResizeOptions.
-func (mr *MockVirtualMachinesClientMockRecorder) ListResizeOptions(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResizeOptions", reflect.TypeOf((*MockVirtualMachinesClient)(nil).ListResizeOptions), arg0, arg1, arg2)
-}
-
 // RedeployAndWait mocks base method.
 func (m *MockVirtualMachinesClient) RedeployAndWait(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()

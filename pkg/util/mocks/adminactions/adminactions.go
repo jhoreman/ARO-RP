@@ -9,6 +9,7 @@ import (
 	http "net/http"
 	reflect "reflect"
 
+	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -204,18 +205,18 @@ func (mr *MockAzureActionsMockRecorder) VMSerialConsole(arg0, arg1, arg2, arg3 i
 }
 
 // VMSizeList mocks base method.
-func (m *MockAzureActions) VMSizeList(arg0 context.Context, arg1 string) ([]byte, error) {
+func (m *MockAzureActions) VMSizeList(arg0 context.Context) ([]compute.ResourceSku, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VMSizeList", arg0, arg1)
-	ret0, _ := ret[0].([]byte)
+	ret := m.ctrl.Call(m, "VMSizeList", arg0)
+	ret0, _ := ret[0].([]compute.ResourceSku)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // VMSizeList indicates an expected call of VMSizeList.
-func (mr *MockAzureActionsMockRecorder) VMSizeList(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockAzureActionsMockRecorder) VMSizeList(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSizeList", reflect.TypeOf((*MockAzureActions)(nil).VMSizeList), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSizeList", reflect.TypeOf((*MockAzureActions)(nil).VMSizeList), arg0)
 }
 
 // VMStartAndWait mocks base method.
