@@ -62,16 +62,20 @@ func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context,
 	return json.Marshal(f.filterVMSkus(skus))
 }
 
-func (f *frontend) filterVMSkus(skus []mgmtcompute.ResourceSku) []string {
-	filteredSkus := []string{}
-
+//func (f *frontend) filterVMSkus(skus []mgmtcompute.ResourceSku) []string {
+func (f *frontend) filterVMSkus(skus []mgmtcompute.ResourceSku) map[string]struct{} {
+	//filteredSkus := []string{}
+	filteredSkus := map[string]struct{}{}
 	for _, sku := range skus {
 		if sku.Restrictions != nil && len(*sku.Restrictions) == 0 {
-			if sku.Name != nil {
-				filteredSkus = append(filteredSkus, *sku.Name)
+			var vmSkus interface{} = *sku.Name
+			_, ok := (vmSkus).(api.VMSize)
+			if ok {
+				filteredSkus[*sku.Name] = struct{}{}
 			}
+			//if sku.Name != nil {
+			//filteredSkus = append(filteredSkus, *sku.Name)
 		}
 	}
-
 	return filteredSkus
 }
