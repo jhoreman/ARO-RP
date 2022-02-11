@@ -3,11 +3,14 @@ pr: none
 trigger: none
 
 parameters:
-- name: vsoConfigBuildID
 - name: aroImageTag
+
+variables:
+- group: Prod CI Credentials
+- group: Prod E2E Non-Secret Variables
+- group: PROD-INT E2E Credentials # This utilizes a variable group, don't update the spelling
 - name: rpImageAcr
-  type: string
-  default: arosvc
+  value: arosvc
 
 stages:
 - stage: Deploy_CanarySector
@@ -30,7 +33,7 @@ stages:
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
       imageTag: ${{ parameters.aroImageTag }}
-      rpImageAcr: ${{ parameters.rpImageAcr }}
+      rpImageAcr: ${{ variables.rpImageAcr }}
 - stage: Deploy_LowTrafficSector
   condition: succeededOrFailed()
   dependsOn: [Deploy_CanarySector]
@@ -58,7 +61,7 @@ stages:
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
       imageTag: ${{ parameters.aroImageTag }}
-      rpImageAcr: ${{ parameters.rpImageAcr }}
+      rpImageAcr: ${{ variables.rpImageAcr }}
 - stage: Deploy_USSector
   condition: succeededOrFailed()
   dependsOn: [Deploy_LowTrafficSector]
@@ -85,7 +88,7 @@ stages:
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
       imageTag: ${{ parameters.aroImageTag }}
-      rpImageAcr: ${{ parameters.rpImageAcr }}
+      rpImageAcr: ${{ variables.rpImageAcr }}
 - stage: Deploy_EuropeSector
   dependsOn: [Deploy_USSector]
   condition: succeededOrFailed()
@@ -114,7 +117,7 @@ stages:
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
       imageTag: ${{ parameters.aroImageTag }}
-      rpImageAcr: ${{ parameters.rpImageAcr }}
+      rpImageAcr: ${{ variables.rpImageAcr }}
 - stage: Deploy_ROWSector
   dependsOn: [Deploy_EuropeSector]
   condition: succeededOrFailed()
@@ -141,4 +144,4 @@ stages:
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
       imageTag: ${{ parameters.aroImageTag }}
-      rpImageAcr: ${{ parameters.rpImageAcr }}
+      rpImageAcr: ${{ variables.rpImageAcr }}

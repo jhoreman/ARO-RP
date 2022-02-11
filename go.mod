@@ -260,7 +260,6 @@ replace (
 // Installer dependencies. Some of them are being used directly in the RP.
 replace (
 	git.apache.org/thrift.git => github.com/apache/thrift v0.15.0
-	github.com/Azure/go-autorest/autorest/adal => github.com/Azure/go-autorest/autorest/adal v0.9.14
 	github.com/BurntSushi/toml => github.com/BurntSushi/toml v0.3.1
 	github.com/IBM-Cloud/terraform-provider-ibm => github.com/openshift/terraform-provider-ibm v1.26.2-openshift-2
 	github.com/c-bata/go-prompt => github.com/c-bata/go-prompt v0.2.5
@@ -299,7 +298,7 @@ replace (
 	github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20210623230745-59ae2edf8875
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20220120123528-15a6add2ff5b
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20220124105820-fdcb82f487fb
-	github.com/openshift/installer => github.com/jewzaam/installer-aro v0.9.0-master.0.20220125150448-68650c15f5df
+	github.com/openshift/installer => github.com/jewzaam/installer-aro v0.9.0-master.0.20220208140934-766bcf74e25c
 	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20220125122342-ff51c8a74c7b
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20211203013047-383c9b959b69
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20211215135312-23d93af42378
