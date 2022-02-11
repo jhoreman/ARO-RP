@@ -63,7 +63,6 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		return err
 	}
 
-	// TODO - remove
 	log.Infof("called resize vm with params vmName: '%s', vmSize: '%s'", vmName, vmSize)
 
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
@@ -71,7 +70,6 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		return err
 	}
 
-	// TODO - remove
 	_, _ = a.VMSizeList(ctx)
 
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
