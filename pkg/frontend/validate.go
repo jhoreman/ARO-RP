@@ -119,13 +119,24 @@ func validateAdminVMName(vmName string) error {
 	return nil
 }
 
+<<<<<<< HEAD
 func validateAdminLocation(location string) error {
 	if location == "" || !rxKubernetesString.MatchString(location) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided Azure Region '%s' is invalid.", location)
+=======
+// Azure resource name rules:
+// https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/resource-name-rules#microsoftnetwork
+var rxNetworkInterfaceName = regexp.MustCompile(`^[a-zA-Z0-9].*\w$`)
+
+func validateNetworkInterfaceName(nicName string) error {
+	if nicName == "" || !rxNetworkInterfaceName.MatchString(nicName) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided nicName '%s' is invalid.", nicName)
+>>>>>>> master
 	}
 
 	return nil
 }
+<<<<<<< HEAD
 
 func validateAdminVMSize(vmSize string) error {
 	if vmSize == "" {
@@ -133,3 +144,5 @@ func validateAdminVMSize(vmSize string) error {
 	}
 	return nil
 }
+=======
+>>>>>>> master
