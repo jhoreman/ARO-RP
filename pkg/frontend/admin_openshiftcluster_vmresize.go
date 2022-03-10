@@ -63,8 +63,6 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		return err
 	}
 
-	log.Infof("called resize vm with params vmName: '%s', vmSize: '%s'", vmName, vmSize)
-
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
@@ -111,7 +109,6 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 			vmName, vars["resourceGroupName"])
 	}
 
-	log.Infof("cordoning node '%s'", resizeNode.ObjectMeta.Name)
 	resizeNode.Spec.Unschedulable = true
 	resizeNode.Status = corev1.NodeStatus{}
 	unstruct := &unstructured.Unstructured{}
@@ -126,25 +123,21 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		return err
 	}
 
-	log.Infof("draining node '%s'", vmName)
 	err = k.KubeDrain(ctx, vmName)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("stopping node '%s'", resizeNode.ObjectMeta.Name)
 	err = a.VMStopAndWait(ctx, vmName)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("resizing node '%s'", resizeNode.ObjectMeta.Name)
 	err = a.VMResize(ctx, vmName, vmSize)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("starting node '%s'", resizeNode.ObjectMeta.Name)
 	err = a.VMStartAndWait(ctx, vmName)
 	if err != nil {
 		return err
