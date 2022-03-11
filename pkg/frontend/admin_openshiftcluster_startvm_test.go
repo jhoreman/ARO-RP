@@ -10,12 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
-
-	//"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -25,15 +21,17 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestAdminListVMSizeList(t *testing.T) {
+func TestAdminStartVM(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
+
 	ctx := context.Background()
 
 	type test struct {
 		name           string
 		resourceID     string
-		fixture        func(f *testdatabase.Fixture)
+		fixture        func(*testdatabase.Fixture)
+		vmName         string
 		mocks          func(*test, *mock_adminactions.MockAzureActions)
 		wantStatusCode int
 		wantResponse   []byte
@@ -42,7 +40,8 @@ func TestAdminListVMSizeList(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:       "happy path",
+			name:       "basic coverage",
+			vmName:     "aro-worker-australiasoutheast-7tcq7",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -56,6 +55,7 @@ func TestAdminListVMSizeList(t *testing.T) {
 						},
 					},
 				})
+
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
@@ -67,67 +67,13 @@ func TestAdminListVMSizeList(t *testing.T) {
 				})
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
-				a.EXPECT().
-					VMSizeList(gomock.Any()).
-					Return([]mgmtcompute.ResourceSku{
-						{
-							Name: to.StringPtr("Standard_D8s_v90"),
-							Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{
-								{
-									Type: mgmtcompute.Location,
-								},
-							},
-						},
-						{
-							Name:         to.StringPtr("Standard_D8s_v9001"),
-							Restrictions: &[]mgmtcompute.ResourceSkuRestrictions{},
-						},
-					}, nil)
+				a.EXPECT().VMStartAndWait(gomock.Any(), tt.vmName).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`["Standard_D8s_v9001"]` + "\n"),
-		},
-		{
-			name:       "cluster not found",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: mockTenantID,
-						},
-					},
-				})
-			},
-			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
-			wantStatusCode: http.StatusNotFound,
-			wantError:      `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
-		},
-		{
-			name:       "subscription doc not found",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
-							},
-						},
-					},
-				})
-			},
-			mocks:          func(tt *test, a *mock_adminactions.MockAzureActions) {},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      fmt.Sprintf(`400: InvalidSubscriptionState: : Request is not allowed in unregistered subscription '%s'.`, mockSubID),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()
+			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
 			a := mock_adminactions.NewMockAzureActions(ti.controller)
@@ -148,11 +94,11 @@ func TestAdminListVMSizeList(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			resp, b, err := ti.request(http.MethodGet,
-				fmt.Sprintf("https://server/admin%s/skus", tt.resourceID),
+			resp, b, err := ti.request(http.MethodPost,
+				fmt.Sprintf("https://server/admin%s/startvm?vmName=%s", tt.resourceID, tt.vmName),
 				nil, nil)
 			if err != nil {
-				t.Fatal(err)
+				t.Error(err)
 			}
 
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)

@@ -68,8 +68,6 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 		return err
 	}
 
-	_, _ = a.VMSizeList(ctx)
-
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return err
@@ -105,72 +103,9 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 
 	if resizeNode == nil {
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "",
-			"The master node '%s' under resource group '%s' was not found.",
+			`"The master node '%s' under resource group '%s' was not found."`,
 			vmName, vars["resourceGroupName"])
 	}
 
-	resizeNode.Spec.Unschedulable = true
-	resizeNode.Status = corev1.NodeStatus{}
-	unstruct := &unstructured.Unstructured{}
-	uMap, err := kruntime.DefaultUnstructuredConverter.ToUnstructured(resizeNode)
-	if err != nil {
-		return err
-	}
-	unstruct.Object = uMap
-
-	err = k.KubeCreateOrUpdate(ctx, unstruct)
-	if err != nil {
-		return err
-	}
-
-	err = k.KubeDrain(ctx, vmName)
-	if err != nil {
-		return err
-	}
-
-	err = a.VMStopAndWait(ctx, vmName)
-	if err != nil {
-		return err
-	}
-
-	err = a.VMResize(ctx, vmName, vmSize)
-	if err != nil {
-		return err
-	}
-
-	err = a.VMStartAndWait(ctx, vmName)
-	if err != nil {
-		return err
-	}
-
-	bNode, err := k.KubeGet(ctx, "node", "", vmName)
-	if err != nil {
-		return err
-	}
-
-	var node corev1.Node
-	if err = json.Unmarshal(bNode, &u); err != nil {
-		return err
-	}
-
-	err = kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &node)
-	if err != nil {
-		return err
-	}
-
-	node.Spec.Unschedulable = false
-	node.Status = corev1.NodeStatus{}
-
-	uMap, err = kruntime.DefaultUnstructuredConverter.ToUnstructured(&node)
-	if err != nil {
-		return err
-	}
-	unstruct.Object = uMap
-
-	err = k.KubeCreateOrUpdate(ctx, unstruct)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return a.VMResize(ctx, vmName, vmSize)
 }

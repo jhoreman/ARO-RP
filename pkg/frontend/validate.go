@@ -119,13 +119,6 @@ func validateAdminVMName(vmName string) error {
 	return nil
 }
 
-func validateAdminLocation(location string) error {
-	if location == "" || !rxKubernetesString.MatchString(location) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided Azure Region '%s' is invalid.", location)
-	}
-	return nil
-}
-
 // Azure resource name rules:
 // https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/resource-name-rules#microsoftnetwork
 var rxNetworkInterfaceName = regexp.MustCompile(`^[a-zA-Z0-9].*\w$`)

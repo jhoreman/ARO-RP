@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
+// /admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/skus
 func (f *frontend) getAdminOpenShiftClusterVMResizeOptions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
